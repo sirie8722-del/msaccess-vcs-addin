@@ -481,6 +481,10 @@ Public Sub WriteFileNoBom(strText As String, strPath As String, Optional strEnco
         stmNoBom.Open
         .Position = 3
         .CopyTo stmNoBom
+        ' CopyTo advances the destination position to the end of the copied
+        ' data; rewind before reading or Read returns an empty array and no
+        ' file is written.
+        stmNoBom.Position = 0
         bteContent = stmNoBom.Read
         stmNoBom.Close
         .Close

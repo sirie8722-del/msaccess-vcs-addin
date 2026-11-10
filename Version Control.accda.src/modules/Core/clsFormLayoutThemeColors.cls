@@ -55,8 +55,8 @@ Public Sub LoadFromThemeFolder(strExportFolder As String)
     ' First, check for an already-extracted theme1.xml in any subfolder.
     ' This handles both manually extracted themes and our own cached extraction.
     For Each oSubFolder In oFolder.SubFolders
-        strXmlPath = oSubFolder.Path & PathSep & "theme" & PathSep & "theme1.xml"
-        If FSO.FileExists(strXmlPath) Then
+        strXmlPath = FindTheme1Xml(oSubFolder.Path)
+        If Len(strXmlPath) > 0 Then
             ParseThemeXml strXmlPath
             Exit Sub
         End If
@@ -79,10 +79,10 @@ Public Sub LoadFromThemeFolder(strExportFolder As String)
     Dim strZipCopy As String
     strBaseName = FSO.GetBaseName(strThmxFile)
     strCacheFolder = GetTempFolder & "vcs_theme_" & strBaseName & PathSep
-    strXmlPath = strCacheFolder & "theme" & PathSep & "theme1.xml"
+    strXmlPath = FindTheme1Xml(strCacheFolder)
 
     ' Check if we already extracted in a previous session
-    If FSO.FileExists(strXmlPath) Then
+    If Len(strXmlPath) > 0 Then
         ParseThemeXml strXmlPath
         Exit Sub
     End If
@@ -111,16 +111,57 @@ Public Sub LoadFromThemeFolder(strExportFolder As String)
         Dim sngTimeout As Single
         sngTimeout = Timer + 10
         Do While Timer < sngTimeout
-            If FSO.FileExists(strXmlPath) Then Exit Do
+            strXmlPath = FindTheme1Xml(strCacheFolder)
+            If Len(strXmlPath) > 0 Then Exit Do
             Pause 0.1
         Loop
     End If
 
-    If FSO.FileExists(strXmlPath) Then
+    strXmlPath = FindTheme1Xml(strCacheFolder)
+    If Len(strXmlPath) > 0 Then
         ParseThemeXml strXmlPath
     End If
 
 End Sub
+
+
+'---------------------------------------------------------------------------------------
+' Procedure : FindTheme1Xml
+' Author    : Adam Waller
+' Date      : 09/07/2026
+' Purpose   : Recursively locate a theme1.xml file under the given folder. Theme
+'           : archives vary in nesting depth (e.g. "theme/theme1.xml" vs
+'           : "theme/theme/theme1.xml"), so a fixed path match is not reliable.
+'---------------------------------------------------------------------------------------
+'
+Private Function FindTheme1Xml(strBaseFolder As String) As String
+
+    Dim oFolder As Scripting.Folder
+    Dim oSubFolder As Scripting.Folder
+    Dim oFile As Scripting.File
+    Dim strFound As String
+
+    If Not FSO.FolderExists(strBaseFolder) Then Exit Function
+    Set oFolder = FSO.GetFolder(strBaseFolder)
+
+    ' Check files directly in this folder first
+    For Each oFile In oFolder.Files
+        If LCase$(oFile.Name) = "theme1.xml" Then
+            FindTheme1Xml = oFile.Path
+            Exit Function
+        End If
+    Next oFile
+
+    ' Recurse into subfolders
+    For Each oSubFolder In oFolder.SubFolders
+        strFound = FindTheme1Xml(oSubFolder.Path)
+        If Len(strFound) > 0 Then
+            FindTheme1Xml = strFound
+            Exit Function
+        End If
+    Next oSubFolder
+
+End Function
 
 
 '---------------------------------------------------------------------------------------
